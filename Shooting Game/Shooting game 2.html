@@ -1,0 +1,213 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<script type="text/javascript" src="scripts/enemy.js"></script>
+	<script type="text/javascript" src="scripts/player.js"></script>
+	<script type="text/javascript" src="scripts/missile.js"></script>
+	<script type="text/javascript" src="scripts/jquery-3.1.0.min.js"></script>
+	<link rel="stylesheet" type="text/css" href="css/reset.css">
+	<link rel="stylesheet" type="text/css" href="css/main.css">
+</head>
+<body>
+	<div style="width:800px; height:70px; margin:10px 0px;">
+		<h1 style="color:red; text-align:center"> Shooting game 
+		<img src="images/startup.png" alt="hihi"/>
+		</h1>
+	</div>
+	<div style="width:800px;border:1px solid black; float:left;">	
+		<canvas id="mainCanvas" width="800" height="480">
+			
+		</canvas>
+	</div>
+	<div style="margin-left: 20px; float:left">
+		Số địch: <span id="spTest"></span>
+		<br/>
+		Level: <span id="spLevel"></span>
+		<br/>
+		Điểm: <span id="spDiem"></span>
+		<br/>
+		Mouse position: <span id="spMouse"></span>
+		<br/>
+		Top: <span id="spTop"></span>
+	
+	</div>
+	<div style="clear:both"></div>
+	<br/>
+	<div style="width: 800px;">
+		<div style="width: 30%; margin: 0 auto">
+			<button id="btnPause">Pause</button>
+			<button id="btnPlay">Play</button>
+			<button id="btnClear">Clear</button>
+			<button id="btnLvlUp">Up</button>
+		</div>
+	</div>
+	<script type="text/javascript">	
+		$(document).ready(function(){ 			
+			var arrEnemy = new Array();
+			var arrMissile = new Array();
+			
+			var thread1, thread2, mainThread;
+			
+			var bInGame = false;
+			var player = new Player();
+			var level = Number(1);
+			
+			var c = document.getElementById("mainCanvas");
+			//var c = $("#mainCanvas");
+			
+			var ctx = c.getContext("2d");
+			
+			//document.getElementById('mainCanvas').style.cursor = "none";
+			$("#mainCanvas").css("cursor","none");
+			
+			function comeEnemy(){
+				arrEnemy.forEach(fallEnemy);
+			}
+			
+			function movingMissile(){
+				arrMissile.forEach(fireMissile);
+			}
+			
+			function refresh(){
+				//xóa toàn bộ màn hình
+				ctx.clearRect(0,0,800,480);
+				
+				//vẽ lại toàn bộ kẻ địch
+				//arrEnemy.forEach(drawEnemy);
+				
+				//vẽ lại đường line phân cách
+				ctx.fillStyle = "#FF0000";
+				ctx.fillRect(0,410,800,10);
+				
+				//vẽ lại đạn
+				//arrMissile.forEach(drawMissile);
+				for (var i=0; i<arrMissile.length;i++){
+					if (arrMissile[i].IsAlive){
+						ctx.drawImage(arrMissile[i].img, arrMissile[i].x, arrMissile[i].y);
+					}
+				}
+				
+				//vẽ lại vị trí nhân vật
+				ctx.drawImage(player.img,player.x,player.y);
+			}
+			
+			function bornEnemy(){
+				if (level < 6){
+					var enemy = new Enemy();
+					arrEnemy.push(enemy);
+				}
+				else {
+					var enemy = new Enemy();
+					arrEnemy.push(enemy);
+					var enemy2 = new Enemy();
+					if ((enemy.x + 60) > enemy2.x || (enemy2.x+60) > enemy.x){
+						if (enemy.x < 400){
+							enemy2.x = Math.random() * 340 + 400;
+						}
+						else {
+							enemy2.x = Math.random() * 340;
+						}
+					}
+					arrEnemy.push(enemy2);
+				}
+			}
+			
+			function drawEnemy(item, index) {
+				if (item.y < 390 && item.IsAlive)
+					ctx.drawImage(item.img,item.x,item.y);
+				else
+					delete item;
+			}
+			
+			//function drawMissile(item, index) {
+			//	if (item.IsAlive)
+			//		ctx.drawImage(item.img, item.x, item.y);
+			//}
+			
+			function fallEnemy(item, index) {
+				item.fall();
+			}
+			
+			function fireMissile(item, index){
+				if (item.IsAlive)
+				{
+					item.fire();				
+					for(var i=0; i< arrEnemy.length; i++){
+						if (arrEnemy[i].IsAlive){
+							if (arrEnemy[i].x - 36 <= item.x && arrEnemy[i].x + 36 >= item.x){
+								if (arrEnemy[i].y + 30 == item.y){
+									//alert("Hihi");
+									item.IsAlive = false;
+									arrEnemy[i].IsAlive = false;
+								}
+							}
+						}
+					}
+				}
+				
+				if (item.y < 0) {
+					item.IsAlive = false;
+				}
+			}
+		
+			$("#btnPause").click(function(){
+				clearInterval(thread1);
+				clearInterval(thread2);
+			});
+			
+			$("#btnPlay").click(function() {
+				if (!bInGame){
+					thread1 = setInterval(bornEnemy, 150*(11-level));
+					thread2 = setInterval(comeEnemy, 50*(11-level));
+					thread3 = setInterval(movingMissile, 50);
+					
+					mainThread = setInterval(refresh, 1);
+					bInGame = true;
+					$("#spLevel").text(level);
+					player.img.onload = function(){
+						ctx.drawImage(player.img,player.x,player.y);
+					}
+				}
+			});
+			
+			$("#btnClear").click(function() {
+				$("#spTest").text(arrEnemy.length);
+			});
+			
+			$(document).mousemove(function(event){
+				if(bInGame){
+					if (event.pageX > 18 && event.pageX < 800-18)
+						player.x = event.pageX - 18;
+					if (event.pageY > 120 && event.pageY < 542)
+						player.y = event.pageY - 90 - 30;
+				}
+			});
+			
+			$(document).click(function(event){
+				if(bInGame){
+					if (event.pageY > 120 && event.pageY < 600){
+						var missile = new Missile(player.x + 12,Math.round(player.y / 10) * 10);
+						arrMissile.push(missile);
+					}
+				}
+			});
+			
+			
+			
+			$("#btnLvlUp").click(function(event){
+				level++;
+				clearInterval(thread1);
+				clearInterval(thread2);
+				thread1 = setInterval(bornEnemy, 150*(11-level));
+				thread2 = setInterval(comeEnemy, 50*(11-level));
+				$("#spLevel").text(level);
+			});
+			
+			
+		});	
+		
+		
+	</script>
+
+</body>
+</html>
